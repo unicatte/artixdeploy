@@ -1,6 +1,7 @@
 #!/bin/sh
 
 export FZF_DEFAULT_OPTS="--layout=reverse --height 40%"
+EFI_INSTALL=false
 
 msg() { printf '\033[32m[unicatte]\033[0m: %s\n' "$1"; }
 
@@ -22,7 +23,7 @@ efi(){
 	EFI_INSTALL=true
 }
 
-swap(){	
+swap(){
 	msg "Creating swap file."
 	RAM_MB=$(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 ))
 	dd if=/dev/zero of=/mnt/swapfile bs=1M count="$(round 1024 "$RAM_MB")" status=progress
@@ -56,7 +57,7 @@ artix-chroot /mnt sh /root/chroot-config.sh
 
 rm -v /mnt/root/chroot-config.sh /mnt/root/chroot-vars
 swapoff /mnt/swapfile
-[ "$EFI_INSTALL" = "true" ] && umount /mnt/boot
+[ "$EFI_INSTALL" = true ] && umount /mnt/boot
 umount /mnt
 
 msg "Installation finished! Reboot in order to use your newly installed operating system!"

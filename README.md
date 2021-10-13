@@ -1,4 +1,4 @@
-# Artix bootstrapping script
+# Artix install script
 
 An Artix install script that aims to simplify the install process for an Arch user that's familiar with the core install process.
 
