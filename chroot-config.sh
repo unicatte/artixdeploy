@@ -48,6 +48,7 @@ read -rn 1
 nvim /etc/locale.gen
 locale-gen
 
+# TO REMOVE after locking the root user has become a part of the script.
 msg "Entering the root password..."
 passwd
 
