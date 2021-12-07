@@ -19,6 +19,7 @@ efi(){
 	[ "$DEPLOY_CHOICE" = "n" ] || [ "$DEPLOY_CHOICE" = "N" ] && return
 	msg "Which partition to use as the EFI system partition?"
 	EFI_PART=$(find /dev/sd?? | fzf)
+	mkdir -p /mnt/boot
 	mount "$EFI_PART" /mnt/boot
 	EFI_INSTALL=true
 }

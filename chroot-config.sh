@@ -21,7 +21,7 @@ grub(){
 efistub(){
 	DEST_ROOT_PARTUUID=$(find /dev/disk/by-partuuid/ -lname ../../"$(printf '%s' "$DEST_PART" | sed 's:.*/::')" | sed 's:.*/::')
 	msg "Adding EFI entry."
-	efibootmgr --disk "$DEST_DISK" --part "$DEST_PART_NUM" --create --label "Artix Linux" --loader /vmlinuz-linux-zen --unicode "root=PARTUUID=$DEST_ROOT_PARTUUID rw initrd=\initramfs-linux-zen.img quiet loglevel=3" --verbose
+	efibootmgr --disk "$DEST_DISK" --part "$DEST_PART_NUM" --create --label "Artix Linux" --loader /vmlinuz-linux-zen --unicode "root=PARTUUID=$DEST_ROOT_PARTUUID rw initrd=\\initramfs-linux-zen.img quiet loglevel=3" --verbose
 }
 
 msg "Adding Arch repos..."
