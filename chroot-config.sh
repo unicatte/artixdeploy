@@ -89,7 +89,7 @@ printf '%s\n' "$HOSTNAME" > /etc/hostname
 printf '127.0.0.1	localhost
 ::1		localhost
 127.0.1.1	%s.localdomain	%s\n' "$HOSTNAME" "$HOSTNAME" >> /etc/hosts
-printf "hostname='%s'" "$HOSTNAME" > /etc/conf.d/hostname
+[ $init_sys = openrc ] && printf "hostname='%s'" "$HOSTNAME" > /etc/conf.d/hostname
 
 UCODE=( $(dialog --stdout --checklist "Select ucode" 0 0 0 intel-ucode "" off amd-ucode "" off) )
 [ -n "${UCODE[@]}" ] && pacman --needed -S ${UCODE[@]}
