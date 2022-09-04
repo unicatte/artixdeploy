@@ -1,14 +1,15 @@
 #!/bin/sh
 
+this_name="$(basename "$0")"
 export FZF_DEFAULT_OPTS="--layout=reverse --height 40%"
 EFI_INSTALL=false
 init_sys=openrc
 
-msg() { printf '\033[32m[unicatte]\033[0m: %s\n' "$1"; }
+msg() { printf '\033[32m[%s]\033[0m: %s\n' "$this_name" "$1"; }
 
-warning() { printf '\033[33m[unicatte]\033[0m: %s\n' "$1"; }
+warning() { printf '\033[33m[%s]\033[0m: %s\n' "$this_name" "$1"; }
 
-error() { printf '\033[31m[unicatte]\033[0m: %s\n' "$1"; exit 1; }
+error() { printf '\033[31m[%s]\033[0m: %s\n' "$this_name" "$1"; exit 1; }
 
 round(){
 	RESULT=$(( $2 % $1 ))
@@ -34,9 +35,6 @@ swap(){
 }
 
 . /etc/lsb-release
-if ! [ "$DISTRIB_ID" = "Arch" ] && ! [ "$DISTRIB_ID" = "Artix" ]
-then error "Operating system not supported. Must be Arch Linux or Artix Linux."
-fi
 case "$DISTRIB_ID" in
 	"Arch")
 		sysstrap=pacstrap
@@ -46,6 +44,8 @@ case "$DISTRIB_ID" in
 		sysstrap=basestrap
 		genfstab=fstabgen
 		additionalpkg=( $init_sys elogind-$init_sys networkmanager-$init_sys );;
+	*)
+		error "Operating system not supported. Must be Arch Linux or Artix Linux."
 esac
 
 pacman --noconfirm --needed -Sy fzf || error "Error downloading essential install packages."
@@ -64,10 +64,11 @@ msg "Installing the base system..."
 $sysstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware fzf zsh git neovim networkmanager dialog xdg-user-dirs mesa $additionalpkg || error "Error downloading essential system packages."
 $genfstab -U /mnt >> /mnt/etc/fstab
 cp chroot-config.sh /mnt/root/
-printf 'distrib_id=%s
+printf 'this_name=%s
+distrib_id=%s
 EFI_INSTALL=%s
 DEST_PART=%s
-init_sys=%s\n' "$DISTRIB_ID" "$EFI_INSTALL" "$DEST_PART" "$init_sys" > /mnt/root/chroot-vars
+init_sys=%s\n' "$this_name" "$DISTRIB_ID" "$EFI_INSTALL" "$DEST_PART" "$init_sys" > /mnt/root/chroot-vars
 artix-chroot /mnt sh /root/chroot-config.sh
 
 rm -v /mnt/root/chroot-config.sh /mnt/root/chroot-vars

@@ -3,14 +3,20 @@
 export FZF_DEFAULT_OPTS="--layout=reverse --height 40%"
 
 . /root/chroot-vars
-DEST_DISK=$(printf "%s\n" "$DEST_PART" | sed 's/.$//')
+case $DEST_PART in
+	/dev/?d??)
+		DEST_DISK=$(printf "%s\n" "$DEST_PART" | sed 's/.$//');;
+	/dev/nvme?n?p?)
+		DEST_DISK=$(printf "%s\n" "$DEST_PART" | sed 's/..$//');;
+esac
+
 DEST_PART_NUM=$(printf "%s\n" "$DEST_PART" | sed 's/\(^.*\)\(.$\)/\2/')
 
-msg() { printf '\033[32m[unicatte]\033[0m: %s\n' "$1"; }
+msg() { printf '\033[32m[%s]\033[0m: %s\n' "$this_name" "$1"; }
 
-warning() { printf '\033[33m[unicatte]\033[0m: %s\n' "$1"; }
+warning() { printf '\033[33m[%s]\033[0m: %s\n' "$this_name" "$1"; }
 
-error() { printf '\033[31m[unicatte]\033[0m: %s\n' "$1"; exit 1; }
+error() { printf '\033[31m[%s]\033[0m: %s\n' "$this_name" "$1"; exit 1; }
 
 grub(){
 	msg "Installing GRUB."
@@ -83,9 +89,10 @@ printf '%s\n' "$HOSTNAME" > /etc/hostname
 printf '127.0.0.1	localhost
 ::1		localhost
 127.0.1.1	%s.localdomain	%s\n' "$HOSTNAME" "$HOSTNAME" >> /etc/hosts
+printf "hostname='%s'" "$HOSTNAME" > /etc/conf.d/hostname
 
 UCODE=( $(dialog --stdout --checklist "Select ucode" 0 0 0 intel-ucode "" off amd-ucode "" off) )
-[ -n "${UCODE[@]}" ] && pacman -S ${UCODE[@]}
+[ -n "${UCODE[@]}" ] && pacman --needed -S ${UCODE[@]}
 
 if [ "$EFI_INSTALL" = true ]
 then pacman -S --noconfirm --needed efibootmgr && efistub
@@ -99,4 +106,5 @@ svcenable NetworkManager
 
 msg "Running LARBS-uni..."
 git clone https://github.com/unicatte/LARBS.git
-(cd LARBS && sh larbs.sh && cd .. && rm -rf LARBS) || error "LARBS-uni failed."
+(cd LARBS && sh larbs.sh) || warning "LARBS-uni failed."
+rm -rvf LARBS
