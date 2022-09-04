@@ -8,6 +8,8 @@ DEST_PART_NUM=$(printf "%s\n" "$DEST_PART" | sed 's/\(^.*\)\(.$\)/\2/')
 
 msg() { printf '\033[32m[unicatte]\033[0m: %s\n' "$1"; }
 
+warning() { printf '\033[33m[unicatte]\033[0m: %s\n' "$1"; }
+
 error() { printf '\033[31m[unicatte]\033[0m: %s\n' "$1"; exit 1; }
 
 grub(){
@@ -21,12 +23,34 @@ grub(){
 efistub(){
 	DEST_ROOT_PARTUUID=$(find /dev/disk/by-partuuid/ -lname ../../"$(printf '%s' "$DEST_PART" | sed 's:.*/::')" | sed 's:.*/::')
 	msg "Adding EFI entry."
-	efibootmgr --disk "$DEST_DISK" --part "$DEST_PART_NUM" --create --label "Artix Linux" --loader /vmlinuz-linux-zen --unicode "root=PARTUUID=$DEST_ROOT_PARTUUID rw initrd=\\initramfs-linux-zen.img quiet loglevel=3" --verbose
+	efibootmgr --disk "$DEST_DISK" --part $DEST_PART_NUM --create --label "Artix Linux" --loader /vmlinuz-linux-zen --unicode "root=PARTUUID=$DEST_ROOT_PARTUUID rw initrc=\\intel-ucode.img initrd=\\initramfs-linux-zen.img quiet loglevel=3" --verbose
 }
 
-msg "Adding Arch repos..."
-#sed -i "/\[lib32\]/,/Include/"'s/^#//' /etc/pacman.conf
-printf '
+svcenable(){
+	case $init_sys in
+		"systemd")
+			systemctl enable $1;;
+		"openrc")
+			rc-update add $1;;
+		"runit")
+			ln -s /etc/runit/sv/$1 /etc/runit/runsvdir/default;;
+	esac
+}
+
+if [ "$distrib_id" = "Artix" ]; then
+	#sed -i "/\[lib32\]/,/Include/"'s/^#//' /etc/pacman.conf
+	msg "Adding universe repo..."
+	printf '
+[universe]
+Server = https://universe.artixlinux.org/$arch
+Server = https://mirror1.artixlinux.org/universe/$arch
+Server = https://mirror.pascalpuffke.de/artix-universe/$arch
+Server = https://artixlinux.qontinuum.space/artixlinux/universe/os/$arch
+Server = https://mirror1.cl.netactuate.com/artix/universe/$arch
+Server = https://ftp.crifo.org/artix-universe/' >> /etc/pacman.conf
+	pacman -Sy --needed --noconfirm artix-archlinux-support archlinux-mirrorlist
+	msg "Adding Arch repos..."
+	printf '
 # ARCH
 [extra]
 Include = /etc/pacman.d/mirrorlist-arch
@@ -37,7 +61,8 @@ Include = /etc/pacman.d/mirrorlist-arch
 #[multilib]
 #Include = /etc/pacman.d/mirrorlist-arch\n' >> /etc/pacman.conf
 
-pacman -Sy
+	pacman -Sy
+fi
 
 msg "Please enter the city of your timezone and select from the list."
 ln -sf "$(find /usr/share/zoneinfo/*/ -maxdepth 1 -type f | fzf)" /etc/localtime
@@ -59,19 +84,19 @@ printf '127.0.0.1	localhost
 ::1		localhost
 127.0.1.1	%s.localdomain	%s\n' "$HOSTNAME" "$HOSTNAME" >> /etc/hosts
 
-UCODE=$(dialog --stdout --checklist "Select ucode" 0 0 0 intel-ucode "" off amd-ucode "" off)
-[ "$UCODE" = "" ] || pacman -S $UCODE
+UCODE=( $(dialog --stdout --checklist "Select ucode" 0 0 0 intel-ucode "" off amd-ucode "" off) )
+[ -n "${UCODE[@]}" ] && pacman -S ${UCODE[@]}
 
 if [ "$EFI_INSTALL" = true ]
 then pacman -S --noconfirm --needed efibootmgr && efistub
 else grub
 fi
 
-DRIVERS=$(dialog --stdout --checklist "Select graphics drivers" 0 0 0 nvidia "" off nvidia-utils "" off xf86-video-intel "" off xf86-video-amdgpu "" off xf86-video-ati "" off xf86-video-vesa "" off xf86-video-nouveau "" off xorg-drivers "" off)
-[ "$DRIVERS" = "" ] || pacman -S $DRIVERS
+DRIVERS=$(dialog --stdout --checklist "Select graphics drivers" 0 0 0 nvidia-dkms "" off nvidia-utils "" off xf86-video-intel "" off xf86-video-amdgpu "" off xf86-video-ati "" off xf86-video-vesa "" off xf86-video-nouveau "" off xorg-drivers "" off)
+[ -n "${DRIVERS[@]}" ] && pacman -S ${DRIVERS[@]}
 
-ln -s /etc/runit/sv/NetworkManager /etc/runit/runsvdir/default/
+svcenable NetworkManager
 
 msg "Running LARBS-uni..."
 git clone https://github.com/unicatte/LARBS.git
-(cd LARBS && sh larbs.sh) || error "LARBS-uni failed."
+(cd LARBS && sh larbs.sh && cd .. && rm -rf LARBS) || error "LARBS-uni failed."
